@@ -1,7 +1,7 @@
 import argparse
+import csv
 import pymupdf
 import re
-import json
 
 def extract_text_with_layout(pdf_path):
     blocks = []
@@ -23,13 +23,18 @@ def parse_vacancies_with_layout(blocks):
     for index, block in enumerate(blocks):
         block_text = block[4].strip()
 
-        if re.match(r"Vacancy VN-\d+", block_text):
-            [_, vacancy] = block_text.split(" ")
+        if "Vacancy VN-" in block_text:
+            parts = block_text.split("\n", 1)
+
+            if len(parts) == 2:
+                detail = parts[1]
+                [_, vacancy] = parts[1].split(" ")
+            else:
+                [_, vacancy] = block_text.split(" ")
 
             job["vacancy"] = vacancy
             client = blocks[index + 1][4].strip()
             job["client"] = " ".join(client.split("\n"))
-
         elif job:
             if "Job Title" in block_text:
                 if block_text == "Job Title":
@@ -69,11 +74,16 @@ def parse_vacancies_with_layout(blocks):
             elif "Agency Website" in block_text:
                 job["agency_website"] = parse_detail_in_block(block_text)
             elif "Position Contact" in block_text:
-                [_, detail] = block_text.split("\n", 1)
-                [contact, number] = detail.split(",")
+                parts = block_text.split("\n", 2)
+                parts_length = len(parts)
 
-                job["position_contact"] = contact.strip()
-                job["contact_number"] = number.strip()
+                if parts_length == 3:
+                    job["position_contact"] = parts[0] + ", " + parts[1]
+                elif parts_length == 2:
+                    [contact, number] = parts
+
+                    job["position_contact"] = contact.strip()
+                    job["contact_number"] = number.strip()
             elif "Agency Recruitment Site" in block_text:
                 job["agency_recruitment_site"] = parse_detail_in_block(block_text)
                 vacancies.append(job)
@@ -87,6 +97,14 @@ def parse_detail_in_block(text):
 
     return " ".join(detail.split("\n"))
 
+def write_to_csv(vacancies):
+    filename = "vacancies.csv"
+
+    with open(filename, 'w', newline='') as csvfile:
+        fieldnames = vacancies[0].keys()
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(vacancies)
 
 def main():
     parser = argparse.ArgumentParser(description="Extract vacancy information from a PDF file.")
@@ -96,11 +114,8 @@ def main():
     pdf_file_path = args.pdf_file
     blocks = extract_text_with_layout(pdf_file_path)
 
-    if isinstance(blocks, str) and blocks.startswith("Error"):
-        print(blocks)
-    else:
-        extracted_vacancies = parse_vacancies_with_layout(blocks)
-        print(json.dumps(extracted_vacancies, indent=2))
+    vacancies = parse_vacancies_with_layout(blocks)
+    write_to_csv(vacancies)
 
 if __name__ == "__main__":
     main()
