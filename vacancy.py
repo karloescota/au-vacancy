@@ -1,7 +1,17 @@
-import argparse
 import csv
+import os
 import pymupdf
 import re
+import sys
+
+def get_current_exe_dir():
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # If the application is run as a bundle, the PyInstaller bootloader
+        # extends the sys module by a flag frozen=True and sets the app 
+        # path into variable _MEIPASS'.
+        return sys._MEIPASS
+    else:
+        return os.path.dirname(os.path.abspath(__file__))
 
 def extract_text_with_layout(pdf_path):
     blocks = []
@@ -98,20 +108,16 @@ def parse_detail_in_block(text):
     return " ".join(detail.split("\n"))
 
 def write_to_csv(vacancies):
-    filename = "vacancies.csv"
+    file_path = get_current_exe_dir() + "/vacancies.csv"
 
-    with open(filename, 'w', newline='') as csvfile:
+    with open(file_path, 'w', newline='') as csvfile:
         fieldnames = vacancies[0].keys()
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(vacancies)
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract vacancy information from a PDF file.")
-    parser.add_argument("pdf_file", help="The path to the PDF file.")
-    args = parser.parse_args()
-
-    pdf_file_path = args.pdf_file
+    pdf_file_path = get_current_exe_dir() + "/gazette.pdf"
     blocks = extract_text_with_layout(pdf_file_path)
 
     vacancies = parse_vacancies_with_layout(blocks)
