@@ -4,14 +4,27 @@ import pymupdf
 import re
 import sys
 
-def get_current_exe_dir():
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        # If the application is run as a bundle, the PyInstaller bootloader
-        # extends the sys module by a flag frozen=True and sets the app 
-        # path into variable _MEIPASS'.
-        return sys._MEIPASS
+def get_exe_directory():
+    """
+    Gets the directory of the PyInstaller executable.
+    """
+    if getattr(sys, 'frozen', False):
+        # If the application is run as a bundle, sys.executable contains
+        # the path to the extracted .exe
+        return os.path.dirname(sys.executable)
     else:
+        # If the application is run as a script, __file__ contains
+        # the path to the .py file
         return os.path.dirname(os.path.abspath(__file__))
+
+# def get_current_exe_dir():
+#     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+#         # If the application is run as a bundle, the PyInstaller bootloader
+#         # extends the sys module by a flag frozen=True and sets the app 
+#         # path into variable _MEIPASS'.
+#         return sys._MEIPASS.replace("/_internal", "")
+#     else:
+#         return os.path.dirname(os.path.abspath(__file__))
 
 def extract_text_with_layout(pdf_path):
     blocks = []
@@ -108,7 +121,7 @@ def parse_detail_in_block(text):
     return " ".join(detail.split("\n"))
 
 def write_to_csv(vacancies):
-    file_path = get_current_exe_dir() + "/vacancies.csv"
+    file_path = os.path.join(get_exe_directory(), "output.csv")
 
     with open(file_path, 'w', newline='') as csvfile:
         fieldnames = vacancies[0].keys()
@@ -117,7 +130,7 @@ def write_to_csv(vacancies):
         writer.writerows(vacancies)
 
 def main():
-    pdf_file_path = get_current_exe_dir() + "/gazette.pdf"
+    pdf_file_path = os.path.join(get_exe_directory(), "input.pdf")
     blocks = extract_text_with_layout(pdf_file_path)
 
     vacancies = parse_vacancies_with_layout(blocks)
