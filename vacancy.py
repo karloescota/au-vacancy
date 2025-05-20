@@ -2,36 +2,15 @@ import csv
 import os
 import pymupdf
 import re
-import sys
 
-def get_exe_directory():
-    """
-    Gets the directory of the PyInstaller executable.
-    """
-    if getattr(sys, 'frozen', False):
-        # If the application is run as a bundle, sys.executable contains
-        # the path to the extracted .exe
-        return os.path.dirname(sys.executable)
-    else:
-        # If the application is run as a script, __file__ contains
-        # the path to the .py file
-        return os.path.dirname(os.path.abspath(__file__))
-
-# def get_current_exe_dir():
-#     if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-#         # If the application is run as a bundle, the PyInstaller bootloader
-#         # extends the sys module by a flag frozen=True and sets the app 
-#         # path into variable _MEIPASS'.
-#         return sys._MEIPASS.replace("/_internal", "")
-#     else:
-#         return os.path.dirname(os.path.abspath(__file__))
-
-def extract_text_with_layout(pdf_path):
+def extract_text_in_blocks(pdf_path):
     blocks = []
     try:
         doc = pymupdf.open(pdf_path)
+
         for page in doc:
             blocks.extend(page.get_text("blocks"))
+
         doc.close()
     except FileNotFoundError:
         return f"Error: File not found at {pdf_path}"
@@ -39,7 +18,7 @@ def extract_text_with_layout(pdf_path):
         return f"An error occurred: {e}"
     return blocks
 
-def parse_vacancies_with_layout(blocks):
+def parse_vacancies(blocks):
     vacancies = []
     job = {}
 
@@ -65,6 +44,7 @@ def parse_vacancies_with_layout(blocks):
                     job["job_title"] = " ".join(detail.split("\n"))
                 else:
                     job["job_title"] = parse_detail_in_block(block_text)
+
             elif "Job Type" in block_text:
                 job["job_type"] = parse_detail_in_block(block_text)
             elif re.match(r"^Location", block_text):
@@ -79,6 +59,7 @@ def parse_vacancies_with_layout(blocks):
                     job["future_merit_locations"] = " ".join(detail.split("\n"))
                 else:
                     job["future_merit_locations"] = " ".join(parts[2].split("\n"))
+
             elif "Office Arrangement" in block_text:
                 parts = block_text.split("\n", 2)
 
@@ -90,6 +71,7 @@ def parse_vacancies_with_layout(blocks):
                         job["office_arrangement"] = " ".join(parts[1].split("\n"))
                 else:
                     job["office_arrangement_details"] = " ".join(parts[2].split("\n"))
+
             elif "Classification" in block_text:
                 job["classification"] = parse_detail_in_block(block_text)
             elif "Position Number" in block_text:
@@ -107,6 +89,7 @@ def parse_vacancies_with_layout(blocks):
 
                     job["position_contact"] = contact.strip()
                     job["contact_number"] = number.strip()
+
             elif "Agency Recruitment Site" in block_text:
                 job["agency_recruitment_site"] = parse_detail_in_block(block_text)
                 vacancies.append(job)
@@ -121,7 +104,7 @@ def parse_detail_in_block(text):
     return " ".join(detail.split("\n"))
 
 def write_to_csv(vacancies):
-    file_path = os.path.join(get_exe_directory(), "output.csv")
+    file_path = os.path.join(os.getcwd(), "output.csv")
 
     with open(file_path, 'w', newline='') as csvfile:
         fieldnames = vacancies[0].keys()
@@ -130,10 +113,10 @@ def write_to_csv(vacancies):
         writer.writerows(vacancies)
 
 def main():
-    pdf_file_path = os.path.join(get_exe_directory(), "input.pdf")
-    blocks = extract_text_with_layout(pdf_file_path)
+    pdf_file_path = os.path.join(os.getcwd(), "audsampleorig.pdf")
+    blocks = extract_text_in_blocks(pdf_file_path)
 
-    vacancies = parse_vacancies_with_layout(blocks)
+    vacancies = parse_vacancies(blocks)
     write_to_csv(vacancies)
 
 if __name__ == "__main__":
