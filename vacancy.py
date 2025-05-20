@@ -113,7 +113,7 @@ def write_to_csv(vacancies):
         writer.writerows(vacancies)
 
 def main():
-    pdf_file_path = os.path.join(os.getcwd(), "audsampleorig.pdf")
+    pdf_file_path = os.path.join(os.getcwd(), "input.pdf")
     blocks = extract_text_in_blocks(pdf_file_path)
 
     vacancies = parse_vacancies(blocks)
